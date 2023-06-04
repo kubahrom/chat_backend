@@ -1,12 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { AnyZodObject } from "zod";
 import { ZodError } from "zod";
-
-interface RequestValidators {
-  params?: AnyZodObject;
-  body?: AnyZodObject;
-  query?: AnyZodObject;
-}
+import RequestValidators from "./types/RequestValidators";
 
 export function validateRequest(validators: RequestValidators) {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -22,8 +17,14 @@ export function validateRequest(validators: RequestValidators) {
       }
       next();
     } catch (error) {
-      if (error instanceof ZodError) res.status(422);
-      next(error);
+      let err = error;
+      if (err instanceof ZodError) {
+        err = err.issues.map((e) => ({ path: e.path[0], message: e.message }));
+      }
+      return res.status(422).json({
+        status: "failed",
+        error: err,
+      });
     }
   };
 }
@@ -34,8 +35,13 @@ export function notFound(req: Request, res: Response, next: NextFunction) {
   next(error);
 }
 
-export function errorHandler(err: Error, _: Request, res: Response) {
-  const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+export function errorHandler(
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const statusCode = res.statusCode !== 200 ? res.statusCode : 503;
   res.status(statusCode);
   res.json({
     message: err.message,

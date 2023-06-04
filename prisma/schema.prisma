@@ -15,10 +15,11 @@ model User {
   name      String
   email     String     @unique
   password  String
+  token     String
   messages  Message[]
   chatRooms ChatRoom[]
 
-  @@index([email])
+  @@index([email, token])
 }
 
 model ChatRoom {
