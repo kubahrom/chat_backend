@@ -14,3 +14,10 @@ export const Register = z
   });
 
 export type RegisterBody = z.infer<typeof Register>;
+
+export const Login = z.object({
+  email: schemaBuilder.email,
+  password: schemaBuilder.password,
+});
+
+export type LoginBody = z.infer<typeof Login>;

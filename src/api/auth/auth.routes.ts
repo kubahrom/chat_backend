@@ -2,7 +2,7 @@ import { Router } from "express";
 
 import * as AuthHandlers from "./auth.handlers";
 import { validateRequest } from "../../middlewares";
-import { Register } from "./auth.model";
+import { Login, Register } from "./auth.model";
 
 const router = Router();
 
@@ -13,5 +13,17 @@ router.post(
   }),
   AuthHandlers.register
 );
+
+router.post(
+  "/login",
+  validateRequest({
+    body: Login,
+  }),
+  AuthHandlers.login
+);
+
+router.post("/logout", AuthHandlers.logout);
+
+router.get("/me", AuthHandlers.me);
 
 export default router;
