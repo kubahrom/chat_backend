@@ -17,6 +17,8 @@ model User {
   password  String
   messages  Message[]
   chatRooms ChatRoom[]
+
+  @@index([email])
 }
 
 model ChatRoom {
