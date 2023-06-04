@@ -46,7 +46,7 @@ export async function register(
     });
 
     res.json({
-      user,
+      data: user,
     });
 
     res.status(201);
@@ -106,7 +106,7 @@ export async function login(
     });
 
     res.json({
-      updatedUser,
+      data: updatedUser,
     });
   } catch (error) {
     next(error);
@@ -143,7 +143,7 @@ export async function me(req: Request, res: Response, next: NextFunction) {
     }
 
     res.json({
-      user: user,
+      data: user,
     });
   } catch (error) {
     next(error);
