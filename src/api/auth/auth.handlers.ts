@@ -115,15 +115,7 @@ export async function login(
 
 export async function logout(req: Request, res: Response, next: NextFunction) {
   try {
-    const userId = res.locals.userId;
-
-    if (!userId) {
-      res.status(401);
-      throw new Error("unauthorized");
-    }
-
     res.cookie("token", "");
-
     res.status(204);
     res.end();
   } catch (error) {
@@ -134,12 +126,6 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
 export async function me(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = res.locals.userId;
-
-    if (!userId) {
-      res.status(401);
-      throw new Error("unauthorized");
-    }
-
     const user = await prisma.user.findUnique({
       where: {
         id: userId,

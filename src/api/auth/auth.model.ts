@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { schemaBuilder } from "../../utils/schemaBuilder";
 
-export const Register = z
+export const RegisterValidator = z
   .object({
     email: schemaBuilder.email,
     name: schemaBuilder.name,
@@ -13,11 +13,11 @@ export const Register = z
     message: "passwords_do_not_match",
   });
 
-export type RegisterBody = z.infer<typeof Register>;
+export type RegisterBody = z.infer<typeof RegisterValidator>;
 
-export const Login = z.object({
+export const LoginValidator = z.object({
   email: schemaBuilder.email,
   password: schemaBuilder.password,
 });
 
-export type LoginBody = z.infer<typeof Login>;
+export type LoginBody = z.infer<typeof LoginValidator>;

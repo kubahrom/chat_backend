@@ -1,15 +1,15 @@
 import { Router } from "express";
 
 import * as AuthHandlers from "./auth.handlers";
-import { validateRequest } from "../../middlewares";
-import { Login, Register } from "./auth.model";
+import { checkAuth, validateRequest } from "../../middlewares";
+import { LoginValidator, RegisterValidator } from "./auth.model";
 
 const router = Router();
 
 router.post(
   "/register",
   validateRequest({
-    body: Register,
+    body: RegisterValidator,
   }),
   AuthHandlers.register
 );
@@ -17,13 +17,13 @@ router.post(
 router.post(
   "/login",
   validateRequest({
-    body: Login,
+    body: LoginValidator,
   }),
   AuthHandlers.login
 );
 
-router.post("/logout", AuthHandlers.logout);
+router.post("/logout", checkAuth, AuthHandlers.logout);
 
-router.get("/me", AuthHandlers.me);
+router.get("/me", checkAuth, AuthHandlers.me);
 
 export default router;

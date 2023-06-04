@@ -30,30 +30,32 @@ export function validateRequest(validators: RequestValidators) {
   };
 }
 
-export async function loadUserId(
+export async function checkAuth(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
     const token: string | undefined = req.cookies.token;
-    if (token) {
-      const userId = await prisma.user.findFirst({
-        where: {
-          token,
-        },
-        select: {
-          id: true,
-        },
-      });
-      if (userId) {
-        res.locals.userId = userId.id;
-      } else {
-        res.locals.userId = null;
-        res.cookie("token", "");
-      }
+    if (!token) {
+      res.status(401);
+      throw new Error("unauthorized");
+    }
+
+    const userId = await prisma.user.findFirst({
+      where: {
+        token,
+      },
+      select: {
+        id: true,
+      },
+    });
+    if (userId) {
+      res.locals.userId = userId.id;
     } else {
-      res.locals.userId = null;
+      res.cookie("token", "");
+      res.status(401);
+      throw new Error("unauthorized");
     }
     next();
   } catch (error) {

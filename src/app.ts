@@ -12,7 +12,6 @@ const app = express();
 app.use(morgan("dev"));
 app.use(helmet());
 app.use(cookieParser());
-app.use(middlewares.loadUserId);
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
