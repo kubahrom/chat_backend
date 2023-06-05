@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 
 import { prisma } from "../../db";
-import { CreateChatRoomBody } from "./chatrooms.model";
+import { CreateChatRoomBody, UpdateChatRoomBody } from "./chatrooms.model";
 import { ParamsWithId } from "../../types/ParamsWithId";
 
 export async function getChatRooms(
@@ -101,6 +101,93 @@ export async function createChatRoom(
 
     res.json({
       data: chatRoom,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteChatRoom(
+  req: Request<ParamsWithId>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = res.locals.userId;
+    const chatRoomId = req.params.id;
+
+    const chatRoom = await prisma.chatRoom.findFirst({
+      where: {
+        id: chatRoomId,
+        authorId: userId,
+      },
+    });
+
+    if (!chatRoom) {
+      res.status(404);
+      throw new Error("not-found");
+    }
+
+    await prisma.chatRoom.delete({
+      where: {
+        id: chatRoomId,
+      },
+    });
+
+    res.json({
+      data: chatRoom,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateChatRoom(
+  req: Request<ParamsWithId, {}, UpdateChatRoomBody>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = res.locals.userId;
+    const chatRoomId = req.params.id;
+
+    const chatRoom = await prisma.chatRoom.findFirst({
+      where: {
+        id: chatRoomId,
+        authorId: userId,
+      },
+    });
+
+    if (!chatRoom) {
+      res.status(404);
+      throw new Error("not-found");
+    }
+
+    const updatedChatRoom = await prisma.chatRoom.update({
+      where: {
+        id: chatRoomId,
+      },
+      data: {
+        name: req.body.name,
+        users: {
+          connect: req.body.users?.map((id) => ({
+            id,
+          })),
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        users: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      data: updatedChatRoom,
     });
   } catch (error) {
     next(error);

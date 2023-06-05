@@ -2,7 +2,10 @@ import { Router } from "express";
 
 import * as ChatRoomHandlers from "./chatrooms.handlers";
 import { checkAuth, validateRequest } from "../../middlewares";
-import { CreateChatRoomValidator } from "./chatrooms.model";
+import {
+  CreateChatRoomValidator,
+  UpdateChatRoomValidator,
+} from "./chatrooms.model";
 import { ParamsWithIdValidator } from "../../types/ParamsWithId";
 
 const router = Router();
@@ -27,4 +30,23 @@ router.post(
   ChatRoomHandlers.createChatRoom
 );
 
+router.delete(
+  "/:id",
+  checkAuth,
+  validateRequest({
+    params: ParamsWithIdValidator,
+  }),
+  ChatRoomHandlers.deleteChatRoom
+);
+
 export default router;
+
+router.put(
+  "/:id",
+  checkAuth,
+  validateRequest({
+    params: ParamsWithIdValidator,
+    body: UpdateChatRoomValidator,
+  }),
+  ChatRoomHandlers.updateChatRoom
+);

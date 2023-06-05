@@ -75,7 +75,7 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ) {
-  const statusCode = res.statusCode !== 200 ? res.statusCode : 503;
+  const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
   res.status(statusCode);
   res.json({
     message: err.message,
