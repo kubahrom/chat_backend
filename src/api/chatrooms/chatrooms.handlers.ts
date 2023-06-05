@@ -193,3 +193,52 @@ export async function updateChatRoom(
     next(error);
   }
 }
+
+export async function leaveChatRoom(
+  req: Request<ParamsWithId>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = res.locals.userId;
+    const chatRoomId = req.params.id;
+
+    const chatRoom = await prisma.chatRoom.findFirst({
+      where: {
+        id: chatRoomId,
+        users: {
+          some: {
+            id: userId,
+          },
+        },
+        NOT: {
+          authorId: userId,
+        },
+      },
+    });
+
+    if (!chatRoom) {
+      res.status(404);
+      throw new Error("not-found");
+    }
+
+    await prisma.chatRoom.update({
+      where: {
+        id: chatRoomId,
+      },
+      data: {
+        users: {
+          disconnect: {
+            id: userId,
+          },
+        },
+      },
+    });
+
+    res.json({
+      data: chatRoom,
+    });
+  } catch (error) {
+    next(error);
+  }
+}

@@ -39,8 +39,6 @@ router.delete(
   ChatRoomHandlers.deleteChatRoom
 );
 
-export default router;
-
 router.put(
   "/:id",
   checkAuth,
@@ -50,3 +48,14 @@ router.put(
   }),
   ChatRoomHandlers.updateChatRoom
 );
+
+router.post(
+  "/leave/:id",
+  checkAuth,
+  validateRequest({
+    params: ParamsWithIdValidator,
+  }),
+  ChatRoomHandlers.leaveChatRoom
+);
+
+export default router;
