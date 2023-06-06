@@ -2,7 +2,7 @@ import { Router } from "express";
 
 import { checkAuth, validateRequest } from "../../middlewares";
 import * as MessagesHandlers from "./messages.handlers";
-import { GetMessagesValidator } from "./messages.model";
+import { AddMessageValidator, GetMessagesValidator } from "./messages.model";
 
 const router = Router();
 
@@ -14,6 +14,15 @@ router.get(
     query: GetMessagesValidator.query,
   }),
   MessagesHandlers.getMessages
+);
+
+router.post(
+  "/",
+  checkAuth,
+  validateRequest({
+    body: AddMessageValidator,
+  }),
+  MessagesHandlers.addMessage
 );
 
 export default router;
