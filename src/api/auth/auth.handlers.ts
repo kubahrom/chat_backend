@@ -1,6 +1,6 @@
 import { Response, Request, NextFunction } from "express";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 import { LoginBody, RegisterBody } from "./auth.model";
 import { prisma } from "../../db";
@@ -23,7 +23,7 @@ export async function register(
     }
 
     const password = await bcrypt.hash(body.password, 10);
-    const token = crypto.randomBytes(16).toString("hex");
+    const token = jwt.sign({}, process.env.REFRESH_TOKEN_SECRET as string);
 
     const user = await prisma.user.create({
       data: {
@@ -39,14 +39,23 @@ export async function register(
       },
     });
 
+    const at = jwt.sign(
+      { userId: user.id },
+      process.env.ACCESS_TOKEN_SECRET as string,
+      {
+        expiresIn: 60 * 10,
+      }
+    );
+
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
     });
 
     res.json({
       data: user,
+      at,
     });
 
     res.status(201);
@@ -83,7 +92,9 @@ export async function login(
       throw new Error("wrong_credentials");
     }
 
-    const token = crypto.randomBytes(16).toString("hex");
+    const token = jwt.sign({}, process.env.REFRESH_TOKEN_SECRET as string, {
+      expiresIn: "30d",
+    });
 
     const updatedUser = await prisma.user.update({
       where: {
@@ -99,6 +110,14 @@ export async function login(
       },
     });
 
+    const at = jwt.sign(
+      { userId: updatedUser.id },
+      process.env.ACCESS_TOKEN_SECRET as string,
+      {
+        expiresIn: 60 * 10,
+      }
+    );
+
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -107,6 +126,7 @@ export async function login(
 
     res.json({
       data: updatedUser,
+      at,
     });
   } catch (error) {
     next(error);
@@ -115,6 +135,17 @@ export async function login(
 
 export async function logout(req: Request, res: Response, next: NextFunction) {
   try {
+    const userId = res.locals.userId;
+
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        token: "",
+      },
+    });
+
     res.cookie("token", "");
     res.status(204);
     res.end();
@@ -123,12 +154,48 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+export async function refresh(req: Request, res: Response, next: NextFunction) {
+  try {
+    const token: string | undefined = req.cookies.token;
+    if (!token) {
+      res.status(401);
+      throw new Error("unauthorized");
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        token,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const at = jwt.sign(
+      { userId: user?.id },
+      process.env.ACCESS_TOKEN_SECRET as string,
+      { expiresIn: 1000 * 60 * 10 }
+    );
+
+    res.json({
+      at,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function me(req: Request, res: Response, next: NextFunction) {
   try {
-    const userId = res.locals.userId;
-    const user = await prisma.user.findUnique({
+    const token: string | undefined = await req.cookies.token;
+    if (!token) {
+      res.status(401);
+      throw new Error("unauthorized");
+    }
+
+    const user = await prisma.user.findFirst({
       where: {
-        id: userId,
+        token,
       },
       select: {
         id: true,
@@ -139,11 +206,18 @@ export async function me(req: Request, res: Response, next: NextFunction) {
 
     if (!user) {
       res.status(401);
-      throw new Error("user_not_found");
+      throw new Error("unauthorized");
     }
+
+    const at = jwt.sign(
+      { userId: user.id },
+      process.env.ACCESS_TOKEN_SECRET as string,
+      { expiresIn: 60 * 10 }
+    );
 
     res.json({
       data: user,
+      at,
     });
   } catch (error) {
     next(error);

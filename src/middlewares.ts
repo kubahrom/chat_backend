@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { AnyZodObject } from "zod";
 import { ZodError } from "zod";
+import jwt from "jsonwebtoken";
 import RequestValidators from "./types/RequestValidators";
 import { prisma } from "./db";
 
@@ -36,27 +37,26 @@ export async function checkAuth(
   next: NextFunction
 ) {
   try {
-    const token: string | undefined = req.cookies.token;
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(" ")[1];
+
     if (!token) {
       res.status(401);
       throw new Error("unauthorized");
     }
 
-    const userId = await prisma.user.findFirst({
-      where: {
-        token,
-      },
-      select: {
-        id: true,
-      },
-    });
-    if (userId) {
-      res.locals.userId = userId.id;
-    } else {
-      res.cookie("token", "");
-      res.status(401);
-      throw new Error("unauthorized");
-    }
+    jwt.verify(
+      token,
+      process.env.ACCESS_TOKEN_SECRET as string,
+      (err, data) => {
+        if (err) {
+          res.status(403);
+          throw new Error("forbidden");
+        }
+
+        if (data && typeof data === "object") res.locals.userId = data?.userId;
+      }
+    );
     next();
   } catch (error) {
     next(error);
