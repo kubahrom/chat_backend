@@ -10,8 +10,7 @@ router.get(
   "/",
   checkAuth,
   validateRequest({
-    body: GetMessagesValidator.body,
-    query: GetMessagesValidator.query,
+    query: GetMessagesValidator,
   }),
   MessagesHandlers.getMessages
 );

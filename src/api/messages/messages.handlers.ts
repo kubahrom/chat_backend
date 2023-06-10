@@ -1,20 +1,15 @@
 import { NextFunction, Request, Response } from "express";
 import { prisma } from "../../db";
-import {
-  AddMessageBody,
-  GetMessagesBody,
-  GetMessagesQuery,
-} from "./messages.model";
+import { AddMessageBody, GetMessagesQuery } from "./messages.model";
 
 export async function getMessages(
-  req: Request<{}, {}, GetMessagesBody, GetMessagesQuery>,
+  req: Request<{}, {}, {}, GetMessagesQuery>,
   res: Response,
   next: NextFunction
 ) {
   try {
     const userId = res.locals.userId;
-    const { id } = req.body;
-    const { take, skip } = req.query;
+    const { take, skip, id } = req.query;
 
     const messages = await prisma.message.findMany({
       where: {
@@ -30,16 +25,21 @@ export async function getMessages(
         },
       },
       orderBy: {
-        createdAt: "desc",
+        createdAt: "asc",
       },
       select: {
         id: true,
         content: true,
         createdAt: true,
-        authorId: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
-      take,
-      skip,
+      take: take ? Number(take) : undefined,
+      skip: skip ? Number(skip) : undefined,
     });
 
     res.json({
@@ -85,7 +85,12 @@ export async function addMessage(
         id: true,
         content: true,
         createdAt: true,
-        authorId: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
