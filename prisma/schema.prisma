@@ -15,12 +15,11 @@ model User {
   name        String
   email       String     @unique
   password    String
-  token       String
   messages    Message[]
   chatRooms   ChatRoom[] @relation("ChatRoomUsers")
   myChatRooms ChatRoom[] @relation("ChatRoomAuthor")
 
-  @@index([email, token])
+  @@index([email])
 }
 
 model ChatRoom {
@@ -33,11 +32,11 @@ model ChatRoom {
 }
 
 model Message {
-  id         String    @id @default(uuid())
+  id         String   @id @default(uuid())
   content    String
-  createdAt  DateTime  @default(now())
-  author     User      @relation(fields: [authorId], references: [id])
+  createdAt  DateTime @default(now())
+  author     User     @relation(fields: [authorId], references: [id])
   authorId   String
-  ChatRoom   ChatRoom? @relation(fields: [chatRoomId], references: [id])
-  chatRoomId String?
+  ChatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  chatRoomId String
 }

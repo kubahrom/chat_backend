@@ -1,9 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { AnyZodObject } from "zod";
 import { ZodError } from "zod";
 import jwt from "jsonwebtoken";
 import RequestValidators from "./types/RequestValidators";
-import { prisma } from "./db";
 
 export function validateRequest(validators: RequestValidators) {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -37,26 +35,21 @@ export async function checkAuth(
   next: NextFunction
 ) {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(" ")[1];
+    const token: string | undefined = req.cookies.token;
 
     if (!token) {
       res.status(401);
       throw new Error("unauthorized");
     }
 
-    jwt.verify(
-      token,
-      process.env.ACCESS_TOKEN_SECRET as string,
-      (err, data) => {
-        if (err) {
-          res.status(403);
-          throw new Error("forbidden");
-        }
-
-        if (data && typeof data === "object") res.locals.userId = data?.userId;
+    jwt.verify(token, process.env.TOKEN_SECRET as string, (err, data) => {
+      if (err) {
+        res.status(403);
+        throw new Error("forbidden");
       }
-    );
+
+      res.locals.userId = (data as { userId: string }).userId;
+    });
     next();
   } catch (error) {
     next(error);

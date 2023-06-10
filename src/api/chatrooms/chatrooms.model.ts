@@ -3,6 +3,7 @@ import { schemaBuilder } from "../../utils/schemaBuilder";
 
 export const CreateChatRoomValidator = z.object({
   name: schemaBuilder.name,
+  users: schemaBuilder.users,
 });
 
 export type CreateChatRoomBody = z.infer<typeof CreateChatRoomValidator>;

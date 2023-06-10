@@ -24,8 +24,8 @@ router.post(
 
 router.post("/logout", checkAuth, AuthHandlers.logout);
 
-router.post("/refresh", AuthHandlers.refresh);
+router.get("/me", checkAuth, AuthHandlers.me);
 
-router.get("/me", AuthHandlers.me);
+// router.post("/refresh", AuthHandlers.refresh);
 
 export default router;

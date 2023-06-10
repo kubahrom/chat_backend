@@ -23,14 +23,12 @@ export async function register(
     }
 
     const password = await bcrypt.hash(body.password, 10);
-    const token = jwt.sign({}, process.env.REFRESH_TOKEN_SECRET as string);
 
     const user = await prisma.user.create({
       data: {
         email: body.email,
         name: body.name,
         password,
-        token,
       },
       select: {
         id: true,
@@ -39,11 +37,11 @@ export async function register(
       },
     });
 
-    const at = jwt.sign(
+    const token = jwt.sign(
       { userId: user.id },
-      process.env.ACCESS_TOKEN_SECRET as string,
+      process.env.TOKEN_SECRET as string,
       {
-        expiresIn: 60 * 10,
+        expiresIn: "30d",
       }
     );
 
@@ -55,7 +53,6 @@ export async function register(
 
     res.json({
       data: user,
-      at,
     });
 
     res.status(201);
@@ -76,6 +73,8 @@ export async function login(
       },
       select: {
         id: true,
+        name: true,
+        email: true,
         password: true,
       },
     });
@@ -92,41 +91,26 @@ export async function login(
       throw new Error("wrong_credentials");
     }
 
-    const token = jwt.sign({}, process.env.REFRESH_TOKEN_SECRET as string, {
-      expiresIn: "30d",
-    });
-
-    const updatedUser = await prisma.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        token,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-      },
-    });
-
-    const at = jwt.sign(
-      { userId: updatedUser.id },
-      process.env.ACCESS_TOKEN_SECRET as string,
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.TOKEN_SECRET as string,
       {
-        expiresIn: 60 * 10,
+        expiresIn: "30d",
       }
     );
 
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
     });
 
     res.json({
-      data: updatedUser,
-      at,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
     });
   } catch (error) {
     next(error);
@@ -135,17 +119,6 @@ export async function login(
 
 export async function logout(req: Request, res: Response, next: NextFunction) {
   try {
-    const userId = res.locals.userId;
-
-    await prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        token: "",
-      },
-    });
-
     res.cookie("token", "");
     res.status(204);
     res.end();
@@ -154,48 +127,14 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export async function refresh(req: Request, res: Response, next: NextFunction) {
-  try {
-    const token: string | undefined = req.cookies.token;
-    if (!token) {
-      res.status(401);
-      throw new Error("unauthorized");
-    }
-
-    const user = await prisma.user.findFirst({
-      where: {
-        token,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    const at = jwt.sign(
-      { userId: user?.id },
-      process.env.ACCESS_TOKEN_SECRET as string,
-      { expiresIn: 1000 * 60 * 10 }
-    );
-
-    res.json({
-      at,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
 export async function me(req: Request, res: Response, next: NextFunction) {
   try {
-    const token: string | undefined = await req.cookies.token;
-    if (!token) {
-      res.status(401);
-      throw new Error("unauthorized");
-    }
+    const userId = res.locals.userId;
+    console.log(userId);
 
     const user = await prisma.user.findFirst({
       where: {
-        token,
+        id: userId,
       },
       select: {
         id: true,
@@ -205,21 +144,45 @@ export async function me(req: Request, res: Response, next: NextFunction) {
     });
 
     if (!user) {
-      res.status(401);
-      throw new Error("unauthorized");
+      res.status(404);
+      throw new Error("not-found");
     }
-
-    const at = jwt.sign(
-      { userId: user.id },
-      process.env.ACCESS_TOKEN_SECRET as string,
-      { expiresIn: 60 * 10 }
-    );
 
     res.json({
       data: user,
-      at,
     });
   } catch (error) {
     next(error);
   }
 }
+
+// export async function refresh(req: Request, res: Response, next: NextFunction) {
+//   try {
+//     const token: string | undefined = req.cookies.token;
+//     if (!token) {
+//       res.status(401);
+//       throw new Error("unauthorized");
+//     }
+
+//     const user = await prisma.user.findFirst({
+//       where: {
+//         token,
+//       },
+//       select: {
+//         id: true,
+//       },
+//     });
+
+//     const at = jwt.sign(
+//       { userId: user?.id },
+//       process.env.ACCESS_TOKEN_SECRET as string,
+//       { expiresIn: 60 * 10 }
+//     );
+
+//     res.json({
+//       data: at,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// }

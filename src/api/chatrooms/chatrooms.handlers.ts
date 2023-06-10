@@ -22,9 +22,9 @@ export async function getChatRooms(
       select: {
         id: true,
         name: true,
-        users: {
+        _count: {
           select: {
-            name: true,
+            users: true,
           },
         },
       },
@@ -61,8 +61,10 @@ export async function getChatRoom(
         users: {
           select: {
             name: true,
+            id: true,
           },
         },
+        authorId: true,
       },
     });
 
@@ -86,14 +88,16 @@ export async function createChatRoom(
 ) {
   try {
     const userId = res.locals.userId;
+    const users = body.users || [];
+    users.push(userId);
 
     const chatRoom = await prisma.chatRoom.create({
       data: {
         name: body.name,
         users: {
-          connect: {
-            id: userId,
-          },
+          connect: users.map((id) => ({
+            id,
+          })),
         },
         authorId: userId,
       },
@@ -115,6 +119,8 @@ export async function deleteChatRoom(
   try {
     const userId = res.locals.userId;
     const chatRoomId = req.params.id;
+
+    console.log("deleting");
 
     const chatRoom = await prisma.chatRoom.findFirst({
       where: {
@@ -156,12 +162,39 @@ export async function updateChatRoom(
         id: chatRoomId,
         authorId: userId,
       },
+      select: {
+        users: {
+          where: {
+            NOT: {
+              id: userId,
+            },
+          },
+        },
+      },
     });
 
     if (!chatRoom) {
       res.status(404);
       throw new Error("not-found");
     }
+
+    const oldUsers = chatRoom.users.map((user) => ({
+      id: user.id,
+    }));
+
+    const newUsers = req.body.users || [];
+
+    const usersToDisconnect = oldUsers.filter((user) => {
+      return !newUsers.some((id) => id === user.id);
+    });
+
+    const usersToConnect = newUsers
+      .filter((id) => {
+        return !oldUsers.some((user) => user.id === id);
+      })
+      .map((id) => ({
+        id,
+      }));
 
     const updatedChatRoom = await prisma.chatRoom.update({
       where: {
@@ -170,9 +203,8 @@ export async function updateChatRoom(
       data: {
         name: req.body.name,
         users: {
-          connect: req.body.users?.map((id) => ({
-            id,
-          })),
+          disconnect: usersToDisconnect,
+          connect: usersToConnect,
         },
       },
       select: {
@@ -186,10 +218,34 @@ export async function updateChatRoom(
       },
     });
 
+    // const updatedChatRoom = await prisma.chatRoom.update({
+    //   where: {
+    //     id: chatRoomId,
+    //   },
+    //   data: {
+    //     name: req.body.name,
+    //     users: {
+    //       connect: req.body.users?.map((id) => ({
+    //         id,
+    //       })),
+    //     },
+    //   },
+    //   select: {
+    //     id: true,
+    //     name: true,
+    //     users: {
+    //       select: {
+    //         name: true,
+    //       },
+    //     },
+    //   },
+    // });
+
     res.json({
       data: updatedChatRoom,
     });
   } catch (error) {
+    console.log(error);
     next(error);
   }
 }
