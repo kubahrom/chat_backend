@@ -14,9 +14,10 @@ app.use(
   cors({
     credentials: true,
     origin: (origin, callback) => {
-      if (true) {
-        // TODO: uncomment this
-        // if (origin && process.env.FE_URL) {
+      if (
+        process.env.NODE_ENV !== "production" ||
+        origin === process.env.FE_URL
+      ) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
