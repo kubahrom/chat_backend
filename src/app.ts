@@ -13,17 +13,16 @@ const app = express();
 app.use(
   cors({
     credentials: true,
-    // origin: (origin, callback) => {
-    //   if (
-    //     process.env.NODE_ENV !== "production" ||
-    //     origin === process.env.FE_URL
-    //   ) {
-    //     callback(null, true);
-    //   } else {
-    //     callback(new Error("Not allowed by CORS"));
-    //   }
-    // },
-    origin: process.env.FE_URL,
+    origin: (origin, callback) => {
+      if (
+        process.env.NODE_ENV !== "production" ||
+        origin === process.env.FE_URL
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
   })
 );
 app.use(morgan("dev"));
