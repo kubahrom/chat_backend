@@ -1,8 +1,19 @@
 import cookieParser from "cookie-parser";
 import { Request, Response } from "express";
 import { Server } from "http";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import jwt from "jsonwebtoken";
+
+type Connection = {
+  ws: WebSocket;
+  userId: string;
+};
+
+type Connections = {
+  [chatroomId: string]: Set<Connection>;
+};
+
+export const connections: Connections = {};
 
 export function createWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
@@ -13,25 +24,29 @@ export function createWebSocketServer(server: Server) {
     });
 
     cookieParser()(req as Request, {} as Response, () => {
-      // console.log((req as Request).cookies.token);
-      // wss.handleUpgrade(req, socket, head, (ws) => {
-      //   wss.emit("connection", ws, req);
-      // });
-
-      const url = new URL(req.url!, `http://${req.headers.host}`);
-      const at = url.searchParams.get("at");
-      const id = url.searchParams.get("id");
-      console.log(id, (req as Request).cookies.token);
+      const token: string = (req as Request).cookies.token;
 
       jwt.verify(
-        at || "",
-        process.env.ACCESS_TOKEN_SECRET as string,
+        token || "",
+        process.env.TOKEN_SECRET as string,
         (err, data) => {
           if (err) {
             socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
             socket.destroy();
             return;
           }
+          const url = new URL(req.url!, `http://${req.headers.host}`);
+          const chatroomId = url.searchParams.get("id");
+
+          if (!chatroomId) {
+            socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
+            socket.destroy();
+            return;
+          }
+
+          (req as Request).cookies.chatroomId = chatroomId;
+          (req as Request).cookies.userId = (data as { userId: string }).userId;
+
           wss.handleUpgrade(req, socket, head, (ws) => {
             wss.emit("connection", ws, req);
           });
@@ -41,13 +56,23 @@ export function createWebSocketServer(server: Server) {
   });
 
   wss.on("connection", (ws, req) => {
-    console.log("WebSocket connected");
-    // console.log(req);
+    const { chatroomId, userId } = (req as Request).cookies;
 
-    ws.send("Hello from WebSocket server");
+    if (!connections[chatroomId]) {
+      connections[chatroomId] = new Set();
+    }
+    connections[chatroomId].add({ ws, userId });
 
     ws.on("close", () => {
-      console.log("WebSocket closed");
+      for (const connection of connections[chatroomId]) {
+        if (connection.ws === ws) {
+          connections[chatroomId].delete(connection);
+        }
+      }
+
+      if (connections[chatroomId].size === 0) {
+        delete connections[chatroomId];
+      }
     });
   });
 }
