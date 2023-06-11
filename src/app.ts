@@ -14,6 +14,11 @@ app.use(
   cors({
     credentials: true,
     origin: (origin, callback) => {
+      console.log({
+        origin,
+        env: process.env.FE_URL,
+        node_env: process.env.NODE_ENV,
+      });
       if (
         process.env.NODE_ENV !== "production" ||
         origin === process.env.FE_URL
