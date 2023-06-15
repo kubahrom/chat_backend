@@ -1,6 +1,12 @@
 # Chat backend
 
-Backend node, express, prisma, postgreSQL, typescript application using websockets.
+Backend chat application using websockets
+
+###### Frontend [https://github.com/kubahrom/chat_frontend](https://github.com/kubahrom/chat_frontend)
+
+## Stack
+
+Node, Express, Prisma, PostgreSQL, Typescript
 
 ## Setup
 
